@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuestForge - Epic Quest Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        /* Custom styles for game-like aesthetic */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+            overflow-x: hidden;
+        }
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: transparent;
+        }
+        .glow {
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        .neon-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        .loading-spinner {
+            display: none;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center text-white">
+    <!-- Particle Background -->
+    <canvas id="particles"></canvas>
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-6 max-w-2xl text-center">
+        <!-- Title -->
+        <h1 class="text-4xl md:text-5xl font-bold neon-text mb-8 animate-pulse">
+            QuestForge
+        </h1>
+        <p class="text-lg md:text-xl text-gray-300 mb-6">
+            Craft Legendary Quests with a Fine-Tuned GPT-2 Model
+        </p>
+        
+        <!-- Tabs -->
+        <div class="flex justify-center mb-8">
+            <button id="generator-tab" class="px-6 py-2 rounded-tl-lg bg-blue-600 font-bold">Generator</button>
+            <button id="status-tab" class="px-6 py-2 rounded-tr-lg bg-gray-700">API Status</button>
+        </div>
+
+        <!-- Generator Form -->
+        <div id="generator-section">
+            <div class="bg-gray-900 bg-opacity-80 p-8 rounded-lg glow">
+                <div class="flex flex-col space-y-4">
+                    <input
+                        id="prompt"
+                        type="text"
+                        placeholder="Enter your quest idea..."
+                        class="bg-gray-800 text-white p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 glow"
+                    >
+                    <button
+                        id="generate-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg transition-all duration-300 glow"
+                        onclick="generateQuest()"
+                    >
+                        Forge Quest
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Section (initially hidden) -->
+        <div id="status-section" class="hidden">
+            <div class="bg-gray-900 bg-opacity-80 p-8 rounded-lg glow">
+                <h2 class="text-2xl font-bold mb-4">API Status</h2>
+                <div id="status-container" class="text-left">
+                    <p class="text-center text-gray-400">Loading status...</p>
+                </div>
+                <button
+                    id="refresh-status"
+                    class="mt-6 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-all duration-300"
+                    onclick="fetchStatus()"
+                >
+                    Refresh Status
+                </button>
+            </div>
+        </div>
+
+        <!-- Quest Output -->
+        <div id="quest-container" class="mt-12 hidden">
+            <h2 class="text-2xl md:text-3xl font-bold neon-text mb-6">
+                Your Epic Quest
+            </h2>
+            <div class="bg-gray-900 bg-opacity-80 p-6 rounded-lg glow">
+                <p id="quest-text" class="text-gray-200 text-lg"></p>
+                <div class="text-xs text-right text-gray-400 mt-4">
+                    <span id="elapsed-time"></span>
+                </div>
+            </div>
+            <div id="loading" class="loading-spinner mx-auto mt-6"></div>
+        </div>
+    </div>
+
+    <script>
+        // Particle Background
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particles = [];
+        const particleCount = 100;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.size > 0.2) this.size -= 0.01;
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((particle, index) => {
+                particle.update();
+                particle.draw();
+                if (particle.size <= 0.2) {
+                    particles.splice(index, 1);
+                    particles.push(new Particle());
+                }
+            });
+            requestAnimationFrame(animateParticles);
+        }
+
+        initParticles();
+        animateParticles();
+
+        // Resize canvas on window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // GSAP Animations
+        gsap.from('h1', { opacity: 0, y: -50, duration: 1, ease: 'power3.out' });
+        gsap.from('p', { opacity: 0, y: 20, duration: 1, delay: 0.5, ease: 'power3.out' });
+        gsap.from('.bg-gray-900', { opacity: 0, scale: 0.8, duration: 1, delay: 1, ease: 'back.out(1.7)' });
+
+        // Generate Quest
+        async function generateQuest() {
+            const prompt = document.getElementById('prompt').value;
+            const questContainer = document.getElementById('quest-container');
+            const questText = document.getElementById('quest-text');
+            const loading = document.getElementById('loading');
+            const generateBtn = document.getElementById('generate-btn');
+
+            if (!prompt) {
+                alert('Please enter a quest idea!');
+                return;
+            }
+
+            // Show loading state
+            questContainer.classList.remove('hidden');
+            loading.style.display = 'block';
+            questText.textContent = '';
+            generateBtn.disabled = true;
+            generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) throw new Error('Failed to generate quest');
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Format and display the quest from the new endpoint format
+                questText.textContent = data.quest;
+                
+                // Display elapsed time if available
+                if (data.elapsed_time) {
+                    document.getElementById('elapsed-time').textContent = `Generated in ${data.elapsed_time.toFixed(2)}s`;
+                }
+            } catch (error) {
+                questText.innerHTML = `
+                    <div class="text-red-500 p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                        <p class="text-lg mb-2">⚠️ Error</p>
+                        <p class="text-sm opacity-90">${error.message || 'Failed to generate quest. Please try again.'}</p>
+                    </div>
+                `;
+                console.error(error);
+            } finally {
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+                generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Add pulsating effect to button on hover
+        const generateBtn = document.getElementById('generate-btn');
+        generateBtn.addEventListener('mouseenter', () => {
+            gsap.to(generateBtn, { scale: 1.1, duration: 0.3, ease: 'power3.out' });
+        });
+        generateBtn.addEventListener('mouseleave', () => {
+            gsap.to(generateBtn, { scale: 1, duration: 0.3, ease: 'power3.out' });
+        });
+
+        // Tab switching
+        const generatorTab = document.getElementById('generator-tab');
+        const statusTab = document.getElementById('status-tab');
+        const generatorSection = document.getElementById('generator-section');
+        const statusSection = document.getElementById('status-section');
+        
+        generatorTab.addEventListener('click', () => {
+            generatorTab.classList.replace('bg-gray-700', 'bg-blue-600');
+            statusTab.classList.replace('bg-blue-600', 'bg-gray-700');
+            generatorSection.classList.remove('hidden');
+            statusSection.classList.add('hidden');
+            if (!statusSection.classList.contains('hidden')) {
+                document.getElementById('quest-container').classList.add('hidden');
+            }
+        });
+        
+        statusTab.addEventListener('click', () => {
+            statusTab.classList.replace('bg-gray-700', 'bg-blue-600');
+            generatorTab.classList.replace('bg-blue-600', 'bg-gray-700');
+            statusSection.classList.remove('hidden');
+            generatorSection.classList.add('hidden');
+            document.getElementById('quest-container').classList.add('hidden');
+            fetchStatus();
+        });
+        
+        // Fetch API Status
+        async function fetchStatus() {
+            const statusContainer = document.getElementById('status-container');
+            
+            try {
+                statusContainer.innerHTML = '<p class="text-center text-gray-400">Loading status...</p>';
+                
+                const response = await fetch('/status');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch status');
+                }
+                
+                const data = await response.json();
+                
+                // Format the status data
+                let statusHTML = '<div class="grid grid-cols-2 gap-4">';
+                
+                // Model Status
+                statusHTML += `
+                    <div class="bg-gray-800 p-4 rounded">
+                        <div class="text-gray-400 mb-1">Status</div>
+                        <div class="font-bold text-green-400">${data.status}</div>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded">
+                        <div class="text-gray-400 mb-1">Model</div>
+                        <div class="font-bold">${data.model.name}</div>
+                    </div>`;
+                
+                if (data.model.uptime_seconds) {
+                    const hours = Math.floor(data.model.uptime_seconds / 3600);
+                    const minutes = Math.floor((data.model.uptime_seconds % 3600) / 60);
+                    const seconds = Math.floor(data.model.uptime_seconds % 60);
+                    
+                    statusHTML += `
+                        <div class="bg-gray-800 p-4 rounded">
+                            <div class="text-gray-400 mb-1">Uptime</div>
+                            <div class="font-bold">${hours}h ${minutes}m ${seconds}s</div>
+                        </div>`;
+                }
+                
+                // System Status
+                statusHTML += `
+                    <div class="bg-gray-800 p-4 rounded">
+                        <div class="text-gray-400 mb-1">CPU Usage</div>
+                        <div class="font-bold">${data.system.cpu_percent}%</div>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded">
+                        <div class="text-gray-400 mb-1">Memory Usage</div>
+                        <div class="font-bold">${data.system.memory_percent}%</div>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded">
+                        <div class="text-gray-400 mb-1">Total Requests</div>
+                        <div class="font-bold">${data.system.total_requests}</div>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded">
+                        <div class="text-gray-400 mb-1">Last Updated</div>
+                        <div class="font-bold">${new Date(data.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                </div>`;
+                
+                statusContainer.innerHTML = statusHTML;
+                
+            } catch (error) {
+                statusContainer.innerHTML = `<p class="text-center text-red-400">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
