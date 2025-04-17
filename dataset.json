@@ -1,4 +1,7 @@
+<<<<<<< Updated upstream
 [
+=======
+>>>>>>> Stashed changes
 {"prompt": "dragon", "quest": "Slay the ancient dragon Vrothgar, who guards the cursed hoard in the Emberfall Peaks."}
 {"prompt": "forest", "quest": "Venture into the Whispering Woods to find the lost druid stone before the moon wanes."}
 {"prompt": "sorcerer", "quest": "Defeat the exiled sorcerer Altherin who rules the floating citadel with iron magic."}
@@ -598,5 +601,9 @@
 {"prompt": "crystal pulse", "quest": "A living crystal grows inside each of them, evolving powers as they bond—but one crystal wants full control."}
 {"prompt": "vengeance pact", "quest": "Cursed to relive their final battle each night, they must conquer death by synchronizing their powers perfectly."}
 {"prompt": "stormrift pact", "quest": "A lightning rift gives each control of a weather phenomenon. The more they use it, the closer they get to unleashing the Storm Entity."}
+<<<<<<< Updated upstream
 {"prompt": "skyfang pact", "quest": "Beast spirits bond with them through ancient totems—hawk, tiger, serpent, wolf—but now the sky beasts are rebelling."}
 ]
+=======
+{"prompt": "skyfang pact", "quest": "Beast spirits bond with them through ancient totems—hawk, tiger, serpent, wolf—but now the sky beasts are rebelling."}
+>>>>>>> Stashed changes
