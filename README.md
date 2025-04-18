@@ -2,6 +2,8 @@
 
 QuestForge is a game quest generation system that uses a fine-tuned GPT-2 model to create engaging and immersive quest descriptions for games based on simple prompts.
 
+![Screenshot 2025-04-17 224620](https://github.com/user-attachments/assets/9e729c7b-beb4-4b45-a864-4de5d4843d0f)
+
 ## What This Project Does
 
 QuestForge is designed to help game developers and designers quickly generate creative quest ideas for their games. The system:
@@ -108,6 +110,8 @@ For a containerized deployment:
 ```
 
 #### Check API Status
+
+![Screenshot 2025-04-17 224749](https://github.com/user-attachments/assets/bd7af47d-b00d-4cc0-b248-33a8b2989611)
 
 **Endpoint**: `GET /status`
 
